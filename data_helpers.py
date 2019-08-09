@@ -66,11 +66,11 @@ def load_train_data(filename, all_answers, voc, word2idx, seq_size):
         for _id in ids:
             question = [voc[idx] for idx in qsent.split(' ')]
             question = encode_sent(question, word2idx, seq_size)
-            for i in range(4):
+            for i in range(1):
                 questions.append(question)
                 pos_answer = encode_sent(all_answers[_id], word2idx, seq_size)
                 pos_answers.append(pos_answer)
-                # Negative samples are randomly sampled, there may be some duplication but the probability is small
+                # Negative samples are randomly sampled
                 neg_answer = encode_sent(all_answers[rand(len(all_answers), ids)], word2idx, seq_size)
                 neg_answers.append(neg_answer)
     return np.array(questions), np.array(pos_answers), np.array(neg_answers)
