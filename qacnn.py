@@ -16,31 +16,35 @@ class QACNN(object):
         self.q = tf.placeholder(tf.int32, shape=[None, self.sequence_length])  # question
         self.ap = tf.placeholder(tf.int32, shape=[None, self.sequence_length])  # positive answer
         self.an = tf.placeholder(tf.int32, shape=[None, self.sequence_length])  # negative answer
+        self.qtest = tf.placeholder(tf.int32, shape=[None, self.sequence_length])  # question to test
+        self.atest = tf.placeholder(tf.int32, shape=[None, self.sequence_length])  # answer to test
         self.lr = tf.placeholder(tf.float32)
 
         with tf.variable_scope('embedding'):
-            q_embed, ap_embed, an_embed = self.embedding_layer()
+            embeddings = tf.Variable(tf.to_float(self.embeddings), trainable=False, name="embeddings")
+            q_embed = tf.nn.embedding_lookup(embeddings, self.q)
+            ap_embed = tf.nn.embedding_lookup(embeddings, self.ap)
+            an_embed = tf.nn.embedding_lookup(embeddings, self.an)
+            qtest_embed = tf.nn.embedding_lookup(embeddings, self.qtest)
+            atest_embed = tf.nn.embedding_lookup(embeddings, self.atest)
         with tf.variable_scope('HL', reuse=tf.AUTO_REUSE):
             h_q = self.hidden_layer(q_embed)
             h_ap = self.hidden_layer(ap_embed)
             h_an = self.hidden_layer(an_embed)
+            h_qtest = self.hidden_layer(qtest_embed)
+            h_atest = self.hidden_layer(atest_embed)
         with tf.variable_scope('CNN', reuse=tf.AUTO_REUSE):
             conv_q = self.convolutional_layer(h_q)
             conv_ap = self.convolutional_layer(h_ap)
             conv_an = self.convolutional_layer(h_an)
+            conv_qtest = self.convolutional_layer(h_qtest)
+            conv_atest = self.convolutional_layer(h_atest)
 
         cos_q_ap = self.calc_cosine(conv_q, conv_ap)
         cos_q_an = self.calc_cosine(conv_q, conv_an)
-
+        self.scores = self.calc_cosine(conv_qtest, conv_atest)
         self.loss, self.acc = self.calc_loss_and_acc(cos_q_ap, cos_q_an)
         self.train_op = tf.train.AdamOptimizer(self.lr).minimize(self.loss)
-
-    def embedding_layer(self):
-        embeddings = tf.Variable(tf.to_float(self.embeddings), trainable=False, name="embeddings")
-        q_embed = tf.nn.embedding_lookup(embeddings, self.q)
-        ap_embed = tf.nn.embedding_lookup(embeddings, self.ap)
-        an_embed = tf.nn.embedding_lookup(embeddings, self.an)
-        return q_embed, ap_embed, an_embed
 
     def hidden_layer(self, x_embed):
         W = tf.get_variable('weights', shape=[self.embedding_size, self.hidden_size], initializer=tf.uniform_unit_scaling_initializer())

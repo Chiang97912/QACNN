@@ -76,6 +76,36 @@ def load_train_data(filename, all_answers, voc, word2idx, seq_size):
     return np.array(questions), np.array(pos_answers), np.array(neg_answers)
 
 
+def load_test_data(filename, all_answers, voc, word2idx, seq_size):
+    questions, answers, labels, qids, aids = [], [], [], [], []
+    qid = 0
+    for line in open(filename):
+        apids, qsent, anids = line.strip().split('\t')
+        apids = [int(_id) for _id in apids.split(' ')]
+        anids = [int(_id) for _id in anids.split(' ')]
+        question = [voc[idx] for idx in qsent.split(' ')]
+        question = encode_sent(question, word2idx, seq_size)
+        aid = 0
+        for _id in apids:
+            questions.append(question)
+            answer = encode_sent(all_answers[_id], word2idx, seq_size)
+            answers.append(answer)
+            labels.append(1)
+            qids.append(qid)
+            aids.append(aid)
+            aid += 1
+        for _id in anids:
+            questions.append(question)
+            answer = encode_sent(all_answers[_id], word2idx, seq_size)
+            answers.append(answer)
+            labels.append(0)
+            qids.append(qid)
+            aids.append(aid)
+            aid += 1
+        qid += 1
+    return np.array(questions), np.array(answers), np.array(labels), np.array(qids), np.array(aids)
+
+
 def batch_iter(questions, pos_answers, neg_answers, batch_size):
     data_size = len(questions)
     batch_num = int(data_size/batch_size)
@@ -86,6 +116,17 @@ def batch_iter(questions, pos_answers, neg_answers, batch_size):
             result_pos_answers.append(pos_answers[i])
             result_neg_answers.append(neg_answers[i])
         yield result_questions, result_pos_answers, result_neg_answers
+
+
+def test_batch_iter(questions, answers, batch_size):
+    data_size = len(questions)
+    batch_num = int(data_size / batch_size)
+    for batch in range(batch_num):
+        result_questions, result_answers = [], []
+        for i in range(batch * batch_size, min((batch + 1) * batch_size, data_size)):
+            result_questions.append(questions[i])
+            result_answers.append(answers[i])
+        yield result_questions, result_answers
 
 
 if __name__ == '__main__':
